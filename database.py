@@ -15,6 +15,15 @@ def init_db():
         )""")
     
 
+    cur.execute("""CREATE TABLE IF NOT EXISTS movies(
+        movie_id  INTEGER PRIMARY KEY AUTOINCREMENT,
+        movie_file TEXT,
+        movie_desc TEXT,
+        movie_code INTEGER UNIQUE,
+        created_at TEXT      
+            )""")
+
+
     conn.commit()
     conn.close()
 
@@ -38,3 +47,15 @@ def get_user(user_id):
     conn.commit()
     conn.close()
     return user
+
+
+
+def add_movie(movie_file, movie_desc, movie_code):
+    conn = sqlite3.connect("filmbot.db")
+    cur = conn.cursor()
+    created_at = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    cur.execute("INSERT INTO movies (movie_file, movie_desc, movie_code, created_at) VALUES (?, ?, ?, ?)", (movie_file, movie_desc, movie_code, created_at))
+    conn.commit()
+    conn.close()
+
+
