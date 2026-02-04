@@ -91,7 +91,7 @@ async def get_movie_desc(message: types.Message, state: FSMContext):
     add_movie(movie_file, final_desc, code)
     await message.answer_video(movie_file, caption=final_desc)
     await message.answer("film yuklandi")
-    
+    await state.clear()
 
 
 
