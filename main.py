@@ -9,10 +9,11 @@ from aiogram.fsm.context import FSMContext
 
 from config import TOKEN, ADMIN_ID
 from buttons.default import phone_btn
-from database import init_db, add_user, get_user, add_movie
+from buttons.inline import sub_keyboard
+from database import init_db, add_user, get_user, add_movie, get_movie_code
 from state import AdminMovie
 from movie_code import generate_move_code
-
+from check_sub import check_subbed_user
 
 logging.basicConfig(level=logging.INFO)
 
@@ -27,23 +28,68 @@ async def start_handler(message: types.Message):
     user_id = message.from_user.id
     full_name = message.from_user.full_name
 
+    # 1. OBUNA TEKSHIRISH
+    is_sub = await check_subbed_user(bot, user_id)
+
+    if not is_sub:
+        await message.answer(
+            "Botdan foydalanish uchun kanalga obuna bo'ling 👇",
+            reply_markup=sub_keyboard([])
+        )
+        return
+
+    # 2. REGISTRATSIYA TEKSHIRISH
     user = get_user(user_id)
+
     if user:
         await message.answer("Film kodini yuboring")
     else:
-        await message.answer(f"Assalomu alaykum hurmatli <b>{full_name}</b>\nRo'yxatdan o'ting👇", reply_markup=phone_btn)
+        await message.answer(
+            f"Assalomu alaykum hurmatli <b>{full_name}</b>\nRo'yxatdan o'ting👇",
+            reply_markup=phone_btn
+        )
 
 
 
 @dp.message(F.contact)
 async def get_user_conatct(message: types.Message):
+
     user_id = message.from_user.id
+
+    # 🔥 AVVAL OBUNA
+    is_sub = await check_subbed_user(bot, user_id)
+
+    if not is_sub:
+        await message.answer(
+            "Avval kanalga obuna bo'ling!",
+            reply_markup=sub_keyboard([])
+        )
+        return
+
+    # ✅ KEYIN REGISTRATSIYA
     full_name = message.from_user.full_name
     username = message.from_user.username
     phone_number = message.contact.phone_number
-    add_user(user_id, full_name, username, phone_number)
-    await message.answer("<b><i>Ro'yxatdan o'tdingiz🥳🥳🥳</i>\nFilm kodini yuboring</b>", reply_markup=ReplyKeyboardRemove())
 
+    add_user(user_id, full_name, username, phone_number)
+
+    await message.answer(
+        "<b><i>Ro'yxatdan o'tdingiz🥳🥳🥳</i>\nFilm kodini yuboring</b>",
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+
+
+
+@dp.callback_query(F.data == "check_sub")
+async def check_subbed(callback: types.CallbackQuery):
+
+    is_sub = await check_subbed_user(bot, callback.from_user.id)
+
+    if is_sub:
+        await callback.message.answer("Rahmat! Endi botdan foydalana olasiz ✅")
+    else:
+        await callback.answer("Hali ham obuna bo'lmadingiz!", show_alert=True)
 
 
 @dp.message(Command("admin"))
@@ -92,6 +138,32 @@ async def get_movie_desc(message: types.Message, state: FSMContext):
     await message.answer_video(movie_file, caption=final_desc)
     await message.answer("film yuklandi")
     await state.clear()
+
+
+
+@dp.message(F.text)
+async def get_movie_code_by_ketmon(message: types.Message):
+
+    user_id = message.from_user.id
+
+    # 🔥 HAR SAFAR OBUNA TEKSHIRAMIZ
+    is_sub = await check_subbed_user(bot, user_id)
+
+    if not is_sub:
+        await message.answer(
+            "Film olishdan oldin kanalga obuna bo'ling!",
+            reply_markup=sub_keyboard([])
+        )
+        return
+
+    movie_code = message.text
+    movie = get_movie_code(movie_code)
+
+    if movie:
+        await message.answer_video(video=movie[1], caption=movie[2])
+    else:
+        await message.answer("Film kodi mavjud emas")
+
 
 
 

@@ -59,3 +59,12 @@ def add_movie(movie_file, movie_desc, movie_code):
     conn.close()
 
 
+
+def get_movie_code(movie_code):
+    conn = sqlite3.connect("filmbot.db")
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM movies WHERE movie_code = ?", (movie_code, ))
+    movie = cur.fetchone()
+    conn.commit()
+    conn.close()
+    return movie
