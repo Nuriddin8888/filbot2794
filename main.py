@@ -28,7 +28,17 @@ async def start_handler(message: types.Message):
     user_id = message.from_user.id
     full_name = message.from_user.full_name
 
-    # 1. OBUNA TEKSHIRISH
+    user = get_user(user_id)
+
+    # 1. USER REGISTRATSIYA QILMAGAN BO‘LSA
+    if not user:
+        await message.answer(
+            f"Assalomu alaykum <b>{full_name}</b>\nAvval ro'yxatdan o'ting👇",
+            reply_markup=phone_btn
+        )
+        return
+
+    # 2. REGISTRATSIYA BOR → OBUNA TEKSHIRAMIZ
     is_sub = await check_subbed_user(bot, user_id)
 
     if not is_sub:
@@ -38,16 +48,8 @@ async def start_handler(message: types.Message):
         )
         return
 
-    # 2. REGISTRATSIYA TEKSHIRISH
-    user = get_user(user_id)
-
-    if user:
-        await message.answer("Film kodini yuboring")
-    else:
-        await message.answer(
-            f"Assalomu alaykum hurmatli <b>{full_name}</b>\nRo'yxatdan o'ting👇",
-            reply_markup=phone_btn
-        )
+    # 3. HAMMASI OK
+    await message.answer("Film kodini yuboring 🎬")
 
 
 
@@ -55,26 +57,27 @@ async def start_handler(message: types.Message):
 async def get_user_conatct(message: types.Message):
 
     user_id = message.from_user.id
-
-    # 🔥 AVVAL OBUNA
-    is_sub = await check_subbed_user(bot, user_id)
-
-    if not is_sub:
-        await message.answer(
-            "Avval kanalga obuna bo'ling!",
-            reply_markup=sub_keyboard([])
-        )
-        return
-
-    # ✅ KEYIN REGISTRATSIYA
     full_name = message.from_user.full_name
     username = message.from_user.username
     phone_number = message.contact.phone_number
 
+    # 1. USERNI BAZAGA SAQLAYMIZ
     add_user(user_id, full_name, username, phone_number)
 
+    # 2. KEYIN OBUNANI TEKSHIRAMIZ
+    is_sub = await check_subbed_user(bot, user_id)
+
+    if not is_sub:
+        await message.answer(
+            "Ro'yxatdan o'tdingiz ✅",reply_markup=ReplyKeyboardRemove()
+        )
+        await message.answer("Endi kanalga obuna bo'ling👇",
+            reply_markup=sub_keyboard([]))
+        return
+
+    # 3. OBUNA HAM BO‘LSA
     await message.answer(
-        "<b><i>Ro'yxatdan o'tdingiz🥳🥳🥳</i>\nFilm kodini yuboring</b>",
+        "<b>Ro'yxatdan o'tdingiz 🥳\nFilm kodini yuboring</b>",
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -84,10 +87,23 @@ async def get_user_conatct(message: types.Message):
 @dp.callback_query(F.data == "check_sub")
 async def check_subbed(callback: types.CallbackQuery):
 
-    is_sub = await check_subbed_user(bot, callback.from_user.id)
+    user_id = callback.from_user.id
+
+    # avval registratsiya bormi?
+    user = get_user(user_id)
+
+    if not user:
+        await callback.message.answer(
+            "Avval ro'yxatdan o'ting!",
+            reply_markup=phone_btn
+        )
+        return
+
+    is_sub = await check_subbed_user(bot, user_id)
 
     if is_sub:
-        await callback.message.answer("Rahmat! Endi botdan foydalana olasiz ✅")
+        await callback.answer()
+        await callback.message.answer("Rahmat! Endi film kodini yuboring ✅", reply_markup=ReplyKeyboardRemove())
     else:
         await callback.answer("Hali ham obuna bo'lmadingiz!", show_alert=True)
 
